@@ -137,7 +137,7 @@ async function createTables() {
       schedule TEXT NOT NULL,
       action TEXT NOT NULL,
       model TEXT DEFAULT 'kimi-coding/k2p5',
-      api_key_id TEXT,
+      api_key TEXT,
       enabled BOOLEAN DEFAULT 1,
       metadata TEXT,
       run_count INTEGER DEFAULT 0,
@@ -145,8 +145,7 @@ async function createTables() {
       last_error TEXT,
       last_error_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (api_key_id) REFERENCES api_keys(id)
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 

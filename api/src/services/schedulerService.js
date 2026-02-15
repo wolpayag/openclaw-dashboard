@@ -271,15 +271,8 @@ export const SchedulerService = {
       const context = task.action.context || '';
       const model = task.model || 'kimi-coding/k2p5';
       
-      let apiKey = null;
-      
-      // Fetch API key if specified
-      if (task.api_key_id) {
-        const keyData = await ApiKeyRepository.findById(task.api_key_id);
-        if (keyData) {
-          apiKey = keyData.key_value;
-        }
-      }
+      // Use API key from task if provided
+      const apiKey = task.api_key || null;
       
       let aiResponse;
       

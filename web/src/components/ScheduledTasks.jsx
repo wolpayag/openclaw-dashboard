@@ -27,32 +27,21 @@ function ScheduledTasks() {
     type: 'system_status',
     schedule: { type: 'daily', time: '08:00' },
     model: 'kimi-coding/k2p5',
-    apiKeyId: '',
+    apiKey: '',
     enabled: true
   })
   const [availableModels, setAvailableModels] = useState([
-    { id: 'kimi-coding/k2p5', name: 'Kimi K2.5', description: 'High quality, API cost' }
+    { id: 'kimi-coding/k2p5', name: 'Kimi K2.5', type: 'cloud', description: 'High quality, API cost' }
   ])
-  const [apiKeys, setApiKeys] = useState([])
   const [editingTask, setEditingTask] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
 
   useEffect(() => {
     loadTasks()
     loadAvailableModels()
-    loadApiKeys()
     const interval = setInterval(loadTasks, 30000) // Refresh every 30s
     return () => clearInterval(interval)
   }, [])
-
-  const loadApiKeys = async () => {
-    try {
-      const data = await api.get('/settings/api-keys')
-      setApiKeys(data.keys || [])
-    } catch (error) {
-      console.error('Failed to load API keys:', error)
-    }
-  }
 
   const loadAvailableModels = async () => {
     try {
@@ -152,7 +141,7 @@ function ScheduledTasks() {
         type: newTask.type,
         schedule: newTask.schedule,
         model: newTask.model,
-        apiKeyId: newTask.apiKeyId || null,
+        apiKey: newTask.apiKey || null,
         enabled: newTask.enabled,
         action: action
       }
@@ -164,7 +153,7 @@ function ScheduledTasks() {
         type: 'system_status',
         schedule: { type: 'daily', time: '08:00' },
         model: 'kimi-coding/k2p5',
-        apiKeyId: '',
+        apiKey: '',
         enabled: true
       })
       loadTasks()
@@ -189,7 +178,7 @@ function ScheduledTasks() {
       type: task.type,
       schedule: task.schedule,
       model: task.model,
-      apiKeyId: task.api_key_id || '',
+      apiKey: task.api_key || '',
       enabled: task.enabled,
       action: task.action || {}
     })
@@ -222,7 +211,7 @@ function ScheduledTasks() {
         type: newTask.type,
         schedule: newTask.schedule,
         model: newTask.model,
-        apiKeyId: newTask.apiKeyId || null,
+        apiKey: newTask.apiKey || null,
         enabled: newTask.enabled,
         action: action
       }
@@ -567,21 +556,16 @@ function ScheduledTasks() {
               {(newTask.model === 'kimi-coding/k2p5' || newTask.model?.includes('kimi')) && (
                 <div>
                   <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key</label>
-                  <select
-                    value={newTask.apiKeyId || ''}
-                    onChange={(e) => setNewTask({...newTask, apiKeyId: e.target.value})}
+                  <input
+                    type="password"
+                    value={newTask.apiKey || ''}
+                    onChange={(e) => setNewTask({...newTask, apiKey: e.target.value})}
+                    placeholder="Enter your Moonshot API key..."
                     className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
-                  >
-                    <option value="">Select API Key...</option>
-                    {apiKeys.filter(k => k.provider === 'moonshot' || k.provider === 'kimi').map(key => (
-                      <option key={key.id} value={key.id}>{key.name}</option>
-                    ))}
-                  </select>
-                  {apiKeys.filter(k => k.provider === 'moonshot' || k.provider === 'kimi').length === 0 && (
-                    <p className="text-xs text-orange-500 mt-1">
-                      No API keys found. Add one in Settings.
-                    </p>
-                  )}
+                  />
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                    Your API key is stored securely with this task
+                  </p>
                 </div>
               )}
 
@@ -820,16 +804,16 @@ function ScheduledTasks() {
               {(newTask.model === 'kimi-coding/k2p5' || newTask.model?.includes('kimi')) && (
                 <div>
                   <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key</label>
-                  <select
-                    value={newTask.apiKeyId || ''}
-                    onChange={(e) => setNewTask({...newTask, apiKeyId: e.target.value})}
+                  <input
+                    type="password"
+                    value={newTask.apiKey || ''}
+                    onChange={(e) => setNewTask({...newTask, apiKey: e.target.value})}
+                    placeholder="Enter your Moonshot API key..."
                     className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
-                  >
-                    <option value="">Select API Key...</option>
-                    {apiKeys.filter(k => k.provider === 'moonshot' || k.provider === 'kimi').map(key => (
-                      <option key={key.id} value={key.id}>{key.name}</option>
-                    ))}
-                  </select>
+                  />
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                    Leave blank to keep existing key
+                  </p>
                 </div>
               )}
               
