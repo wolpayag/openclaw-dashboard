@@ -132,7 +132,7 @@ export const ModelService = {
       if (!keyToUse) {
         return `⚠️ *AI Response Unavailable*\n\n` +
           `Prompt: "${prompt}"\n\n` +
-          `No API key configured. Please add a Moonshot API key in Settings > API Keys.`;
+          `No API key configured. Please enter your Moonshot API key in the task settings.`;
       }
 
       try {
@@ -145,7 +145,8 @@ export const ModelService = {
           body: JSON.stringify({
             model: 'kimi-k2-5',
             messages: [{ role: 'user', content: fullPrompt }],
-            temperature: 0.7
+            temperature: 0.7,
+            max_tokens: 1000
           })
         });
 
@@ -153,10 +154,23 @@ export const ModelService = {
           const data = await response.json();
           return data.choices?.[0]?.message?.content || 'No response from AI';
         } else {
-          const error = await response.text();
-          throw new Error(`API error: ${error}`);
+          const errorData = await response.json().catch(() => ({}));
+          const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
+          
+          if (errorMsg.includes('Invalid') || response.status === 401) {
+            return `⚠️ *Invalid API Key*\n\n` +
+              `The API key you provided is invalid or expired.\n\n` +
+              `Please check your Moonshot API key and try again.`;
+          }
+          
+          throw new Error(`API error: ${errorMsg}`);
         }
       } catch (e) {
+        if (e.message.includes('fetch') || e.message.includes('network')) {
+          return `⚠️ *Network Error*\n\n` +
+            `Could not connect to Moonshot API.\n\n` +
+            `Please check your internet connection.`;
+        }
         return `Error calling AI: ${e.message}`;
       }
     }

@@ -12,14 +12,14 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // POST /api/models/generate - Generate text with a model
 router.post('/generate', asyncHandler(async (req, res) => {
-  const { model, prompt, context } = req.body;
+  const { model, prompt, context, apiKey } = req.body;
   
   if (!model || !prompt) {
     return res.status(400).json({ error: 'Model and prompt are required' });
   }
   
   try {
-    const response = await ModelService.generateWithModel(model, prompt, context);
+    const response = await ModelService.generateWithModel(model, prompt, context, apiKey);
     res.json({ response, model });
   } catch (error) {
     res.status(500).json({ error: error.message });

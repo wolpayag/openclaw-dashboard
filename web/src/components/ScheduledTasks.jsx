@@ -408,8 +408,8 @@ function ScheduledTasks() {
 
       {/* Add Task Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--bg-primary)] rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--bg-primary)] rounded-lg p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Add Scheduled Task</h3>
             
             <form onSubmit={createTask} className="space-y-4">
@@ -638,8 +638,8 @@ function ScheduledTasks() {
 
       {/* Edit Task Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--bg-primary)] rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--bg-primary)] rounded-lg p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Edit Scheduled Task</h3>
             
             <form onSubmit={updateTask} className="space-y-4">
