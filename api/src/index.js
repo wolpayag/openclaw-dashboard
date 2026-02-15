@@ -13,6 +13,7 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { initializeDatabase } from './models/index.js';
 import { initializeWebSocket } from './websocket/index.js';
 import { startSchedulers } from './services/scheduler.js';
+import { SchedulerService } from './services/schedulerService.js';
 
 // Routes
 import taskRoutes from './routes/tasks.js';
@@ -20,6 +21,7 @@ import agentRoutes from './routes/agents.js';
 import statsRoutes from './routes/stats.js';
 import webhookRoutes from './routes/webhooks.js';
 import healthRoutes from './routes/health.js';
+import scheduledTaskRoutes from './routes/scheduledTasks.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,6 +57,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/scheduled-tasks', scheduledTaskRoutes);
 app.use('/health', healthRoutes);
 
 // Error handling
@@ -74,6 +77,10 @@ async function startServer() {
     // Start schedulers
     startSchedulers(io);
     logger.info('Schedulers started');
+
+    // Initialize scheduled tasks
+    await SchedulerService.initializeScheduledTasks();
+    logger.info('Scheduled tasks initialized');
 
     // Start HTTP server
     httpServer.listen(PORT, () => {

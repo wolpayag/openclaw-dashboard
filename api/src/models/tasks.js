@@ -64,8 +64,8 @@ export const TaskRepository = {
 
     await db.run(`
       INSERT INTO tasks (id, title, description, status, priority, agent_id, 
-                        parent_task_id, input, metadata, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        parent_task_id, input, github_repo, github_url, metadata, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       taskData.title,
@@ -75,6 +75,8 @@ export const TaskRepository = {
       taskData.agentId || null,
       taskData.parentTaskId || null,
       taskData.input ? JSON.stringify(taskData.input) : null,
+      taskData.githubRepo || null,
+      taskData.githubUrl || null,
       taskData.metadata ? JSON.stringify(taskData.metadata) : null,
       now,
       now
@@ -121,6 +123,16 @@ export const TaskRepository = {
     if (updates.errorMessage) {
       fields.push('error_message = ?');
       values.push(updates.errorMessage);
+    }
+
+    if (updates.githubRepo !== undefined) {
+      fields.push('github_repo = ?');
+      values.push(updates.githubRepo);
+    }
+
+    if (updates.githubUrl !== undefined) {
+      fields.push('github_url = ?');
+      values.push(updates.githubUrl);
     }
 
     if (updates.metadata) {

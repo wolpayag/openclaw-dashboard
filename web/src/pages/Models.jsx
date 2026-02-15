@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Brain, Zap, Clock, DollarSign } from 'lucide-react'
+import { Brain, Zap, Clock, DollarSign, ExternalLink } from 'lucide-react'
 import { api } from '../utils/api'
 import { useDashboardStore } from '../store/themeStore'
 
@@ -47,9 +47,26 @@ function Models() {
     }
   ]
 
+  // Get real usage from stats
+  const usage = stats?.usage || {}
+  const todayTokens = usage.today?.total_tokens || 0
+  const todayCost = usage.today?.total_cost || 0
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[var(--text-primary)]">Model Monitor</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Model Monitor</h1>
+        
+        <a 
+          href="https://platform.moonshot.cn/console/usage"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          <span>Open Kimi Console</span>
+          <ExternalLink className="w-4 h-4" />
+        </a>
+      </div>
 
       {/* Current Model Status */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -59,7 +76,7 @@ function Models() {
             <h3 className="font-semibold text-[var(--text-primary)]">Active Model</h3>
           </div>
           <p className="text-2xl font-bold text-[var(--text-primary)]">Kimi K2.5</p>
-          <p className="text-sm text-[var(--text-secondary)]">{kimi-coding/k2p5}</p>
+          <p className="text-sm text-[var(--text-secondary)]">kimi-coding/k2p5</p>
         </div>
 
         <div className="card">
@@ -74,19 +91,47 @@ function Models() {
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
             <Clock className="w-6 h-6 text-blue-500" />
-            <h3 className="font-semibold text-[var(--text-primary)]">Avg Response</h3>
+            <h3 className="font-semibold text-[var(--text-primary)]">Today's Tokens</h3>
           </div>
-          <p className="text-2xl font-bold text-[var(--text-primary)]">1.2s</p>
-          <p className="text-sm text-[var(--text-secondary)]">Last 24 hours</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">
+            {todayTokens.toLocaleString()}
+          </p>
+          <p className="text-sm text-[var(--text-secondary)]">From OpenClaw sessions</p>
         </div>
 
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
             <DollarSign className="w-6 h-6 text-green-500" />
-            <h3 className="font-semibold text-[var(--text-primary)]">Cost Efficiency</h3>
+            <h3 className="font-semibold text-[var(--text-primary)]">Est. Cost Today</h3>
           </div>
-          <p className="text-2xl font-bold text-[var(--text-primary)]">92%</p>
-          <p className="text-sm text-[var(--text-secondary)]">Compared to GPT-4</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">
+            ${todayCost.toFixed(4)}
+          </p>
+          <p className="text-sm text-[var(--text-secondary)]">Based on token usage</p>
+        </div>
+      </div>
+
+      {/* Kimi Console Link Card */}
+      <div className="card border border-primary-500/30 bg-primary-500/5">
+        <div className="flex items-start gap-4">
+          <div className="p-3 rounded-lg bg-primary-500/10">
+            <ExternalLink className="w-6 h-6 text-primary-500" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-[var(--text-primary)]">Kimi Console Usage</h3>
+            <p className="text-sm text-[var(--text-secondary)] mt-1">
+              View detailed usage statistics, billing information, and API logs on the official Kimi Console.
+            </p>
+            <a 
+              href="https://platform.moonshot.cn/console/usage"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 mt-3 text-primary-500 hover:text-primary-600 font-medium"
+            >
+              Open platform.moonshot.cn
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
         </div>
       </div>
 

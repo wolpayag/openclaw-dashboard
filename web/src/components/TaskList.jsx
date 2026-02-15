@@ -5,7 +5,9 @@ import {
   Clock, 
   Play, 
   Pause,
-  AlertCircle 
+  AlertCircle,
+  Github,
+  ExternalLink
 } from 'lucide-react'
 
 const statusIcons = {
@@ -50,9 +52,24 @@ function TaskList({ tasks, compact = false }) {
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-[var(--text-primary)] truncate">
-                {task.title}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-[var(--text-primary)] truncate">
+                  {task.title}
+                </p>
+                {task.github_repo && (
+                  <a
+                    href={task.github_url || `https://github.com/wolpayag/${task.github_repo}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Github className="w-3 h-3" />
+                    {task.github_repo}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
               {!compact && task.description && (
                 <p className="text-sm text-[var(--text-secondary)] truncate">
                   {task.description}

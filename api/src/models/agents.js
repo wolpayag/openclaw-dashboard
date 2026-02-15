@@ -29,7 +29,8 @@ export const AgentRepository = {
 
   async create(agentData) {
     const db = getDb();
-    const id = uuidv4();
+    // Use provided ID or generate new one
+    const id = agentData.id || uuidv4();
     const now = new Date().toISOString();
 
     await db.run(`

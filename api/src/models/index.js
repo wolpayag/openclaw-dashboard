@@ -16,6 +16,9 @@ export async function initializeDatabase() {
     filename: dbPath,
     driver: sqlite3.Database
   });
+  
+  // Enable foreign keys
+  await db.run('PRAGMA foreign_keys = ON');
 
   await createTables();
   logger.info(`Database initialized at ${dbPath}`);
@@ -36,6 +39,8 @@ async function createTables() {
       progress INTEGER DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
       input TEXT,
       output TEXT,
+      github_repo TEXT,
+      github_url TEXT,
       error_message TEXT,
       metadata TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -108,6 +113,39 @@ async function createTables() {
     )
   `);
 
+  // Scheduled tasks table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS scheduled_tasks (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      type TEXT DEFAULT 'system_status',
+      schedule TEXT NOT NULL,
+      action TEXT NOT NULL,
+      model TEXT DEFAULT 'kimi-coding/k2p5',
+      enabled BOOLEAN DEFAULT 1,
+      metadata TEXT,
+      run_count INTEGER DEFAULT 0,
+      last_run_at DATETIME,
+      last_error TEXT,
+      last_error_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Scheduled task execution logs
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS scheduled_task_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id TEXT NOT NULL,
+      status TEXT DEFAULT 'success',
+      output TEXT,
+      executed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES scheduled_tasks(id)
+    )
+  `);
+
   // Create indexes for performance
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_agent ON tasks(agent_id)`);
@@ -115,6 +153,8 @@ async function createTables() {
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status)`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_usage_date ON usage_stats(date)`);
   await db.exec(`CREATE INDEX IF NOT EXISTS idx_events_created ON system_events(created_at)`);
+  await db.exec(`CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_enabled ON scheduled_tasks(enabled)`);
+  await db.exec(`CREATE INDEX IF NOT EXISTS idx_scheduled_task_logs_task ON scheduled_task_logs(task_id)`);
 }
 
 export function getDb() {
