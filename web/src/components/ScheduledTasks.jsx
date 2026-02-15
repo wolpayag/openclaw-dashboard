@@ -29,12 +29,27 @@ function ScheduledTasks() {
     model: 'kimi-coding/k2p5',
     enabled: true
   })
+  const [availableModels, setAvailableModels] = useState([
+    { id: 'kimi-coding/k2p5', name: 'Kimi K2.5', description: 'High quality, API cost' }
+  ])
 
   useEffect(() => {
     loadTasks()
+    loadAvailableModels()
     const interval = setInterval(loadTasks, 30000) // Refresh every 30s
     return () => clearInterval(interval)
   }, [])
+
+  const loadAvailableModels = async () => {
+    try {
+      const data = await api.get('/models')
+      if (data.models && data.models.length > 0) {
+        setAvailableModels(data.models)
+      }
+    } catch (error) {
+      console.error('Failed to load models:', error)
+    }
+  }
 
   // Auto-hide notification after 3 seconds
   useEffect(() => {
@@ -449,11 +464,14 @@ function ScheduledTasks() {
                   onChange={(e) => setNewTask({...newTask, model: e.target.value})}
                   className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
                 >
-                  <option value="kimi-coding/k2p5">Kimi K2.5 (High quality)</option>
-                  <option value="local">Local Model (Save tokens)</option>
+                  {availableModels.map(model => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-xs text-[var(--text-secondary)] mt-1">
-                  {newTask.model === 'local' ? 'Uses local model to save API costs' : 'Uses Kimi K2.5 for best quality'}
+                  {availableModels.find(m => m.id === newTask.model)?.description || 'Select a model'}
                 </p>
               </div>
 

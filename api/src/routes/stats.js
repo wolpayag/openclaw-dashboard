@@ -4,6 +4,12 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
+// GET /api/stats - Get all stats (root endpoint)
+router.get('/', asyncHandler(async (req, res) => {
+  const stats = await StatsService.getDashboardStats();
+  res.json(stats);
+}));
+
 // GET /api/stats/dashboard - Get dashboard overview stats
 router.get('/dashboard', asyncHandler(async (req, res) => {
   const stats = await StatsService.getDashboardStats();

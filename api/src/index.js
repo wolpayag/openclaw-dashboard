@@ -22,6 +22,7 @@ import statsRoutes from './routes/stats.js';
 import webhookRoutes from './routes/webhooks.js';
 import healthRoutes from './routes/health.js';
 import scheduledTaskRoutes from './routes/scheduledTasks.js';
+import modelRoutes from './routes/models.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,6 +57,7 @@ app.use(requestLogger);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/models', modelRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/scheduled-tasks', scheduledTaskRoutes);
 app.use('/health', healthRoutes);

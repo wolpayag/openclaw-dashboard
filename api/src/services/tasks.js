@@ -1,6 +1,8 @@
 import { TaskRepository } from '../models/tasks.js';
 import { AgentRepository } from '../models/agents.js';
 import { EventRepository } from '../models/events.js';
+import { StatsService } from './stats.js';
+import { broadcastToAll } from '../websocket/index.js';
 import { logger } from '../utils/logger.js';
 
 export const TaskService = {
@@ -26,6 +28,9 @@ export const TaskService = {
       message: `Task "${task.title}" created`,
       metadata: { taskId: task.id }
     });
+
+    // Broadcast updated stats
+    await this.broadcastStatsUpdate();
 
     return task;
   },
@@ -57,6 +62,9 @@ export const TaskService = {
       }
     }
 
+    // Broadcast updated stats
+    await this.broadcastStatsUpdate();
+
     return task;
   },
 
@@ -67,7 +75,20 @@ export const TaskService = {
     }
 
     await TaskRepository.delete(id);
+    
+    // Broadcast updated stats
+    await this.broadcastStatsUpdate();
+    
     return { deleted: true };
+  },
+
+  async broadcastStatsUpdate() {
+    try {
+      const stats = await StatsService.getDashboardStats();
+      broadcastToAll('stats:update', stats);
+    } catch (error) {
+      logger.error('Failed to broadcast stats update:', error.message);
+    }
   },
 
   async getTaskStats() {
@@ -88,6 +109,9 @@ export const TaskService = {
       status: 'active',
       currentTaskId: taskId
     });
+
+    // Broadcast updated stats
+    await this.broadcastStatsUpdate();
 
     return task;
   }
