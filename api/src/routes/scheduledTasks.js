@@ -71,22 +71,17 @@ router.post('/:id/run', asyncHandler(async (req, res) => {
 
 // DELETE /api/scheduled-tasks/:id - Delete task
 router.delete('/:id', asyncHandler(async (req, res) => {
-  const db = getDb();
   const { id } = req.params;
   
   try {
-    // First, stop the scheduled job if running
-    await SchedulerService.deleteTask(id);
-    
-    // Delete logs first (foreign key constraint)
-    await db.run('DELETE FROM scheduled_task_logs WHERE task_id = ?', id);
-    
-    // Then delete the task
-    const result = await db.run('DELETE FROM scheduled_tasks WHERE id = ?', id);
-    
-    if (result.changes === 0) {
+    // First check if task exists
+    const task = await ScheduledTaskRepository.findById(id);
+    if (!task) {
       return res.status(404).json({ error: 'Task not found' });
     }
+    
+    // Stop the scheduled job if running
+    await SchedulerService.deleteTask(id);
     
     res.status(200).json({ deleted: true });
   } catch (error) {
