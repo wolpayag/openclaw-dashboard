@@ -3,6 +3,14 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
+// Model API endpoints
+const MODEL_APIS = {
+  'kimi-coding/k2p5': {
+    url: 'https://api.moonshot.cn/v1/chat/completions',
+    model: 'kimi-k2-5'
+  }
+};
+
 export const ModelService = {
   async getAvailableModels() {
     const models = [
@@ -13,7 +21,7 @@ export const ModelService = {
     try {
       const { stdout } = await execAsync('ollama list 2>/dev/null || echo ""');
       if (stdout) {
-        const lines = stdout.trim().split('\n').slice(1); // Skip header
+        const lines = stdout.trim().split('\n').slice(1);
         for (const line of lines) {
           const parts = line.trim().split(/\s+/);
           if (parts.length >= 4) {
@@ -28,10 +36,10 @@ export const ModelService = {
         }
       }
     } catch (e) {
-      // Ollama not installed or not running
+      // Ollama not installed
     }
 
-    // Check for common local model endpoints
+    // Check for local API endpoints
     const localEndpoints = [
       { url: 'http://localhost:11434/api/tags', name: 'Ollama API' },
       { url: 'http://localhost:8080/v1/models', name: 'LocalAI' },
@@ -42,24 +50,20 @@ export const ModelService = {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 1000);
-        
-        const response = await fetch(endpoint.url, { 
-          signal: controller.signal 
-        });
+        const response = await fetch(endpoint.url, { signal: controller.signal });
         clearTimeout(timeout);
         
         if (response.ok) {
           const data = await response.json();
-          // Parse different API formats
           if (data.models) {
             for (const model of data.models) {
               const modelId = model.id || model.name || model.model;
               if (modelId && !models.find(m => m.id === `local:${modelId}`)) {
                 models.push({
                   id: `local:${modelId}`,
-                  name: `${modelId} (Local - ${endpoint.name})`,
+                  name: `${modelId} (Local)`,
                   type: 'local',
-                  description: `Local model via ${endpoint.name}`
+                  description: `Local model`
                 });
               }
             }
@@ -76,12 +80,13 @@ export const ModelService = {
   async generateWithModel(modelId, prompt, context = '') {
     const fullPrompt = context ? `${context}\n\n${prompt}` : prompt;
 
+    // Local Ollama models
     if (modelId.startsWith('ollama:')) {
-      // Use Ollama
       const modelName = modelId.replace('ollama:', '');
       try {
         const { stdout } = await execAsync(
-          `ollama run ${modelName} "${fullPrompt.replace(/"/g, '\\"')}" 2>/dev/null`
+          `ollama run ${modelName} "${fullPrompt.replace(/"/g, '\\"')}" 2>/dev/null`,
+          { timeout: 60000 }
         );
         return stdout.trim();
       } catch (e) {
@@ -89,30 +94,17 @@ export const ModelService = {
       }
     }
 
+    // Local API models (LocalAI, LM Studio)
     if (modelId.startsWith('local:')) {
-      // Try LocalAI or LM Studio format
       const modelName = modelId.replace('local:', '');
+      const endpoints = [
+        'http://localhost:8080/v1/chat/completions',
+        'http://localhost:5001/v1/chat/completions'
+      ];
       
-      // Try LocalAI first
-      try {
-        const response = await fetch('http://localhost:8080/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: modelName,
-            messages: [{ role: 'user', content: fullPrompt }],
-            temperature: 0.7
-          })
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          return data.choices?.[0]?.message?.content || 'No response';
-        }
-      } catch (e) {
-        // Try LM Studio
+      for (const endpoint of endpoints) {
         try {
-          const response = await fetch('http://localhost:5001/v1/chat/completions', {
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -126,85 +118,54 @@ export const ModelService = {
             const data = await response.json();
             return data.choices?.[0]?.message?.content || 'No response';
           }
-        } catch (e2) {
-          throw new Error('No local model endpoint available');
+        } catch (e) {
+          continue;
         }
       }
+      throw new Error('No local model endpoint available');
     }
 
-    // For Kimi and other cloud models, call via OpenClaw CLI
+    // Cloud models - try to call actual AI API
     if (modelId === 'kimi-coding/k2p5' || modelId.includes('kimi')) {
+      const apiKey = process.env.MOONSHOT_API_KEY || process.env.OPENCLAW_MOONSHOT_KEY;
+      
+      if (!apiKey) {
+        // No API key available - return clear message
+        return `⚠️ *AI Response Unavailable*\n\n` +
+          `Prompt: "${prompt}"\n\n` +
+          `To get real AI responses, please set the MOONSHOT_API_KEY environment variable:\n` +
+          `\`export MOONSHOT_API_KEY=your_key_here\`\n\n` +
+          `Alternatively, install Ollama for free local AI:\n` +
+          `\`curl -fsSL https://ollama.com/install.sh | sh\`\n` +
+          `\`ollama pull llama3.2\``;
+      }
+
       try {
-        // Use openclaw CLI to send a message that will get an AI response
-        const { stdout, stderr } = await execAsync(
-          `cd /home/paul/.openclaw/workspace && echo '${fullPrompt.replace(/'/g, "'\\''")}' | timeout 30 openclaw run --model ${modelId} --thinking low 2>&1 || echo "OpenClaw CLI not available"`
-        );
-        
-        if (stdout && stdout.trim() && !stdout.includes('not available')) {
-          return stdout.trim();
+        const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'kimi-k2-5',
+            messages: [{ role: 'user', content: fullPrompt }],
+            temperature: 0.7
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.choices?.[0]?.message?.content || 'No response from AI';
+        } else {
+          const error = await response.text();
+          throw new Error(`API error: ${error}`);
         }
       } catch (e) {
-        // CLI failed, fall through to better response
+        return `Error calling AI: ${e.message}`;
       }
-      
-      // Better fallback: generate a contextual response based on the prompt
-      return this.generateContextualResponse(prompt, context, modelId);
     }
 
-    // Default: return contextual response
-    return this.generateContextualResponse(prompt, context, modelId);
-  },
-
-  generateContextualResponse(prompt, context, modelId) {
-    // Generate a contextual response based on the prompt type
-    const promptLower = prompt.toLowerCase();
-    
-    // Jokes prompts
-    if (promptLower.includes('joke')) {
-      return `😄 *Here are 2 jokes for you:*\n\n` +
-        `*Joke 1:*\n` +
-        `Why don't scientists trust atoms?\n` +
-        `Because they make up everything!\n\n` +
-        `*Joke 2:*\n` +
-        `Why did the scarecrow win an award?\n` +
-        `He was outstanding in his field!\n\n` +
-        `_Hope that made you smile! 😊_`;
-    }
-    
-    // Motivational/tips prompts
-    if (promptLower.includes('motivat') || promptLower.includes('tip') || promptLower.includes('advice')) {
-      return `🎯 *Here are 3 motivational tips for you:*\n\n` +
-        `1. **Start small** - Break your big goals into tiny, actionable steps. Momentum builds from small wins.\n\n` +
-        `2. **Focus on progress, not perfection** - Done is better than perfect. Every step forward counts.\n\n` +
-        `3. **Celebrate small wins** - Acknowledge your progress to stay motivated and build confidence.\n\n` +
-        `_Stay awesome! 💪_`;
-    }
-    
-    // Coding/programming prompts
-    if (promptLower.includes('code') || promptLower.includes('programming') || promptLower.includes('developer')) {
-      return `💻 *Coding Insights:*\n\n` +
-        `1. **Write tests first** - TDD helps you think through your design and catch bugs early.\n\n` +
-        `2. **Keep it simple** - The best code is code you can understand 6 months later.\n\n` +
-        `3. **Refactor regularly** - Clean code is a joy to work with and reduces technical debt.\n\n` +
-        `_Happy coding! 🚀_`;
-    }
-    
-    // Productivity prompts
-    if (promptLower.includes('productivity') || promptLower.includes('focus') || promptLower.includes('work')) {
-      return `⚡ *Productivity Boosters:*\n\n` +
-        `1. **Time blocking** - Schedule focused work sessions and protect that time.\n\n` +
-        `2. **Eliminate distractions** - Turn off notifications during deep work periods.\n\n` +
-        `3. **Take breaks** - The Pomodoro technique (25min work, 5min break) maintains energy.\n\n` +
-        `_You've got this! 💪_`;
-    }
-    
-    // Default response
-    return `🤖 *Response to:* "${prompt}"\n\n` +
-      `${context ? `Context: ${context}\n\n` : ''}` +
-      `Here are 3 helpful suggestions:\n\n` +
-      `1. Break this down into smaller, manageable steps\n` +
-      `2. Focus on the most important aspect first\n` +
-      `3. Don't hesitate to ask for help if needed\n\n` +
-      `_Model: ${modelId}_`;
+    return `Model ${modelId} not supported`;
   }
 };
