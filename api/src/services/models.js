@@ -159,6 +159,18 @@ export const ModelService = {
     // Generate a contextual response based on the prompt type
     const promptLower = prompt.toLowerCase();
     
+    // Jokes prompts
+    if (promptLower.includes('joke')) {
+      return `😄 *Here are 2 jokes for you:*\n\n` +
+        `*Joke 1:*\n` +
+        `Why don't scientists trust atoms?\n` +
+        `Because they make up everything!\n\n` +
+        `*Joke 2:*\n` +
+        `Why did the scarecrow win an award?\n` +
+        `He was outstanding in his field!\n\n` +
+        `_Hope that made you smile! 😊_`;
+    }
+    
     // Motivational/tips prompts
     if (promptLower.includes('motivat') || promptLower.includes('tip') || promptLower.includes('advice')) {
       return `🎯 *Here are 3 motivational tips for you:*\n\n` +
