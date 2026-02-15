@@ -1,0 +1,51 @@
+{
+  "name": "openclaw-dashboard-api",
+  "version": "1.0.0",
+  "description": "Backend API for OpenClaw Dashboard",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/",
+    "db:migrate": "node src/models/migrate.js",
+    "db:seed": "node src/models/seed.js"
+  },
+  "keywords": [
+    "openclaw",
+    "dashboard",
+    "monitoring",
+    "ai",
+    "workflow"
+  ],
+  "author": "Paul",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "dotenv": "^16.3.1",
+    "socket.io": "^4.7.4",
+    "sqlite3": "^5.1.6",
+    "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "winston": "^3.11.0",
+    "joi": "^17.11.0",
+    "axios": "^1.6.2",
+    "node-cron": "^3.0.3",
+    "uuid": "^9.0.1",
+    "date-fns": "^3.0.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "eslint": "^8.56.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: openclaw-dashboard-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3001}:3001"
+      - "${WS_PORT:-3002}:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - WS_PORT=3002
+      - DB_TYPE=${DB_TYPE:-sqlite}
+      - DB_PATH=/app/data/dashboard.db
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENCLAW_API_URL=${OPENCLAW_API_URL:-http://host.docker.internal:8080}
+      - OPENCLAW_API_KEY=${OPENCLAW_API_KEY}
+      - KIMI_API_KEY=${KIMI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - openclaw-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: openclaw-dashboard-web
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+      - VITE_WS_URL=ws://localhost:3002
+    depends_on:
+      - api
+    networks:
+      - openclaw-network
+
+  # Optional: PostgreSQL for production
+  postgres:
+    image: postgres:15-alpine
+    container_name: openclaw-dashboard-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-openclaw}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-openclaw}
+      - POSTGRES_DB=${POSTGRES_DB:-openclaw_dashboard}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - openclaw-network
+    profiles:
+      - postgres
+
+volumes:
+  postgres_data:
+
+networks:
+  openclaw-network:
+    driver: bridge

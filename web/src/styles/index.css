@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+  }
+
+  .dark {
+    --bg-primary: #111827;
+    --bg-secondary: #1f2937;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+  }
+
+  body {
+    @apply bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg p-6;
+  }
+
+  .status-pending { @apply text-yellow-500; }
+  .status-in_progress { @apply text-blue-500; }
+  .status-completed { @apply text-green-500; }
+  .status-failed { @apply text-red-500; }
+  .status-cancelled { @apply text-gray-500; }
+}
