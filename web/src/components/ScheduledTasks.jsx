@@ -543,7 +543,12 @@ function ScheduledTasks() {
                   className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
                 >
                   {availableModels.map(model => (
-                    <option key={model.id} value={model.id}>
+                    <option 
+                      key={model.id} 
+                      value={model.id}
+                      disabled={model.disabled}
+                      style={model.type === 'header' ? {fontWeight: 'bold', backgroundColor: 'var(--bg-secondary)'} : {}}
+                    >
                       {model.name}
                     </option>
                   ))}
@@ -553,15 +558,17 @@ function ScheduledTasks() {
                 </p>
               </div>
 
-              {(newTask.model === 'kimi-coding/k2p5' || newTask.model?.includes('kimi')) && (
+              {/* Show API key field only for custom models */}
+              {newTask.model?.startsWith('custom-') && (
                 <div>
-                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key</label>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key *</label>
                   <input
                     type="password"
                     value={newTask.apiKey || ''}
                     onChange={(e) => setNewTask({...newTask, apiKey: e.target.value})}
-                    placeholder="Enter your Moonshot API key..."
+                    placeholder="Enter your API key..."
                     className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                    required
                   />
                   <p className="text-xs text-[var(--text-secondary)] mt-1">
                     Your API key is stored securely with this task
@@ -794,21 +801,27 @@ function ScheduledTasks() {
                   className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
                 >
                   {availableModels.map(model => (
-                    <option key={model.id} value={model.id}>
+                    <option 
+                      key={model.id} 
+                      value={model.id}
+                      disabled={model.disabled}
+                      style={model.type === 'header' ? {fontWeight: 'bold', backgroundColor: 'var(--bg-secondary)'} : {}}
+                    >
                       {model.name}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {(newTask.model === 'kimi-coding/k2p5' || newTask.model?.includes('kimi')) && (
+              {/* Show API key field only for custom models */}
+              {newTask.model?.startsWith('custom-') && (
                 <div>
                   <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key</label>
                   <input
                     type="password"
                     value={newTask.apiKey || ''}
                     onChange={(e) => setNewTask({...newTask, apiKey: e.target.value})}
-                    placeholder="Enter your Moonshot API key..."
+                    placeholder="Enter your API key..."
                     className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
                   />
                   <p className="text-xs text-[var(--text-secondary)] mt-1">

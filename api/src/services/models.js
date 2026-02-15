@@ -1,23 +1,29 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { ConfigService } from './config.js';
 
 const execAsync = promisify(exec);
 
-// Model API endpoints
-const MODEL_APIS = {
-  'kimi-coding/k2p5': {
-    url: 'https://api.moonshot.cn/v1/chat/completions',
-    model: 'kimi-k2-5'
-  }
-};
-
 export const ModelService = {
   async getAvailableModels() {
-    const models = [
-      { id: 'kimi-coding/k2p5', name: 'Kimi K2.5', type: 'cloud', description: 'High quality, API cost' }
-    ];
-
-    // Check for Ollama (local models)
+    // Get pre-configured models from OpenClaw config
+    const configuredModels = ConfigService.getConfiguredModels();
+    
+    const models = [];
+    
+    // Configured models (no API key needed)
+    if (configuredModels.length > 0) {
+      models.push({ id: 'header-configured', name: 'Configured Models', type: 'header', disabled: true });
+      models.push(...configuredModels.map(m => ({
+        ...m,
+        description: '✓ Pre-configured (no API key needed)'
+      })));
+    }
+    
+    // Local models section
+    const localModels = [];
+    
+    // Check for Ollama
     try {
       const { stdout } = await execAsync('ollama list 2>/dev/null || echo ""');
       if (stdout) {
@@ -26,7 +32,7 @@ export const ModelService = {
           const parts = line.trim().split(/\s+/);
           if (parts.length >= 4) {
             const modelName = parts[0];
-            models.push({
+            localModels.push({
               id: `ollama:${modelName}`,
               name: `${modelName} (Local)`,
               type: 'local',
@@ -38,41 +44,21 @@ export const ModelService = {
     } catch (e) {
       // Ollama not installed
     }
-
-    // Check for local API endpoints
-    const localEndpoints = [
-      { url: 'http://localhost:11434/api/tags', name: 'Ollama API' },
-      { url: 'http://localhost:8080/v1/models', name: 'LocalAI' },
-      { url: 'http://localhost:5001/v1/models', name: 'LM Studio' }
-    ];
-
-    for (const endpoint of localEndpoints) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 1000);
-        const response = await fetch(endpoint.url, { signal: controller.signal });
-        clearTimeout(timeout);
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.models) {
-            for (const model of data.models) {
-              const modelId = model.id || model.name || model.model;
-              if (modelId && !models.find(m => m.id === `local:${modelId}`)) {
-                models.push({
-                  id: `local:${modelId}`,
-                  name: `${modelId} (Local)`,
-                  type: 'local',
-                  description: `Local model`
-                });
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // Endpoint not available
-      }
+    
+    if (localModels.length > 0) {
+      models.push({ id: 'header-local', name: 'Local Models', type: 'header', disabled: true });
+      models.push(...localModels);
     }
+    
+    // Custom/External models (need API key)
+    models.push({ id: 'header-custom', name: 'Custom Models', type: 'header', disabled: true });
+    models.push({ 
+      id: 'custom-kimi', 
+      name: 'Kimi K2.5 (with API key)', 
+      type: 'custom',
+      provider: 'moonshot',
+      description: 'Requires your own API key'
+    });
 
     return models;
   },
@@ -80,6 +66,9 @@ export const ModelService = {
   async generateWithModel(modelId, prompt, context = '', apiKey = null) {
     const fullPrompt = context ? `${context}\n\n${prompt}` : prompt;
 
+    // Check if this is a pre-configured model
+    const isConfigured = ConfigService.isModelConfigured(modelId);
+    
     // Local Ollama models
     if (modelId.startsWith('ollama:')) {
       const modelName = modelId.replace('ollama:', '');
@@ -94,45 +83,48 @@ export const ModelService = {
       }
     }
 
-    // Local API models (LocalAI, LM Studio)
-    if (modelId.startsWith('local:')) {
-      const modelName = modelId.replace('local:', '');
-      const endpoints = [
-        'http://localhost:8080/v1/chat/completions',
-        'http://localhost:5001/v1/chat/completions'
-      ];
+    // For configured models - use the API that would work with the key
+    if (isConfigured) {
+      // Try environment variable first (what OpenClaw uses)
+      const envKey = process.env.MOONSHOT_API_KEY;
       
-      for (const endpoint of endpoints) {
+      if (envKey) {
         try {
-          const response = await fetch(endpoint, {
+          const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${envKey}`
+            },
             body: JSON.stringify({
-              model: modelName,
+              model: 'kimi-k2-5',
               messages: [{ role: 'user', content: fullPrompt }],
-              temperature: 0.7
+              temperature: 0.7,
+              max_tokens: 1000
             })
           });
-          
+
           if (response.ok) {
             const data = await response.json();
-            return data.choices?.[0]?.message?.content || 'No response';
+            return data.choices?.[0]?.message?.content || 'No response from AI';
           }
         } catch (e) {
-          continue;
+          // Fall through to message
         }
       }
-      throw new Error('No local model endpoint available');
+      
+      return `⚠️ *OpenClaw API Key Not Available*\n\n` +
+        `The model is configured in OpenClaw, but the API key is not accessible to the dashboard.\n\n` +
+        `Options:\n` +
+        `1. Set MOONSHOT_API_KEY environment variable for the dashboard\n` +
+        `2. Use "Custom Model" and provide your own API key`;
     }
 
-    // Cloud models - use provided API key or fall back to env
-    if (modelId === 'kimi-coding/k2p5' || modelId.includes('kimi')) {
-      const keyToUse = apiKey || process.env.MOONSHOT_API_KEY || process.env.OPENCLAW_MOONSHOT_KEY;
-      
-      if (!keyToUse) {
-        return `⚠️ *AI Response Unavailable*\n\n` +
-          `Prompt: "${prompt}"\n\n` +
-          `No API key configured. Please enter your Moonshot API key in the task settings.`;
+    // Custom models - require API key
+    if (modelId.startsWith('custom-') || modelId.includes('kimi')) {
+      if (!apiKey) {
+        return `⚠️ *API Key Required*\n\n` +
+          `Please enter your API key to use this model.`;
       }
 
       try {
@@ -140,7 +132,7 @@ export const ModelService = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${keyToUse}`
+            'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
             model: 'kimi-k2-5',
@@ -158,23 +150,20 @@ export const ModelService = {
           const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
           
           if (errorMsg.includes('Invalid') || response.status === 401) {
-            return `⚠️ *Invalid API Key*\n\n` +
-              `The API key you provided is invalid or expired.\n\n` +
-              `Please check your Moonshot API key and try again.`;
+            return `⚠️ *Invalid API Key*\n\nPlease check your API key.`;
           }
           
           throw new Error(`API error: ${errorMsg}`);
         }
       } catch (e) {
-        if (e.message.includes('fetch') || e.message.includes('network')) {
-          return `⚠️ *Network Error*\n\n` +
-            `Could not connect to Moonshot API.\n\n` +
-            `Please check your internet connection.`;
-        }
-        return `Error calling AI: ${e.message}`;
+        return `Error: ${e.message}`;
       }
     }
 
     return `Model ${modelId} not supported`;
+  },
+
+  isPreConfigured(modelId) {
+    return ConfigService.isModelConfigured(modelId);
   }
 };
