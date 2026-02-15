@@ -11,12 +11,12 @@ export const ModelService = {
     
     const models = [];
     
-    // Configured models (no API key needed)
+    // Configured models (may need API key via custom model)
     if (configuredModels.length > 0) {
       models.push({ id: 'header-configured', name: 'Configured Models', type: 'header', disabled: true });
       models.push(...configuredModels.map(m => ({
         ...m,
-        description: '✓ Pre-configured (no API key needed)'
+        description: '⚠️ May need custom API key (see below)'
       })));
     }
     
@@ -83,41 +83,58 @@ export const ModelService = {
       }
     }
 
-    // For configured models - use the API that would work with the key
+    // For configured models - get API key from OpenClaw's auth profiles
     if (isConfigured) {
-      // Try environment variable first (what OpenClaw uses)
-      const envKey = process.env.MOONSHOT_API_KEY;
+      // Get provider from model ID (e.g., "kimi-coding/k2p5" -> "kimi-coding")
+      const provider = modelId.split('/')[0];
       
-      if (envKey) {
-        try {
-          const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${envKey}`
-            },
-            body: JSON.stringify({
-              model: 'kimi-k2-5',
-              messages: [{ role: 'user', content: fullPrompt }],
-              temperature: 0.7,
-              max_tokens: 1000
-            })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            return data.choices?.[0]?.message?.content || 'No response from AI';
-          }
-        } catch (e) {
-          // Fall through to message
-        }
+      // Try to get API key from OpenClaw's stored credentials
+      const openclawKey = ConfigService.getApiKeyForProvider(provider);
+      
+      // Use provided key, OpenClaw key, or env var
+      const keyToUse = apiKey || openclawKey || process.env.MOONSHOT_API_KEY;
+      
+      if (!keyToUse) {
+        return `⚠️ *API Key Not Available*\n\n` +
+          `The model is configured in OpenClaw, but the API key could not be read.\n\n` +
+          `Options:\n` +
+          `1. Use "Custom Model" and provide your own API key\n` +
+          `2. Set MOONSHOT_API_KEY environment variable`;
       }
-      
-      return `⚠️ *OpenClaw API Key Not Available*\n\n` +
-        `The model is configured in OpenClaw, but the API key is not accessible to the dashboard.\n\n` +
-        `Options:\n` +
-        `1. Set MOONSHOT_API_KEY environment variable for the dashboard\n` +
-        `2. Use "Custom Model" and provide your own API key`;
+
+      try {
+        const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${keyToUse}`
+          },
+          body: JSON.stringify({
+            model: 'kimi-k2-5',
+            messages: [{ role: 'user', content: fullPrompt }],
+            temperature: 0.7,
+            max_tokens: 1000
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.choices?.[0]?.message?.content || 'No response from AI';
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
+          
+          if (errorMsg.includes('Invalid') || response.status === 401) {
+            return `⚠️ *API Key Issue*\n\n` +
+              `The stored API key could not be used directly.\n\n` +
+              `Workaround: Use "Custom Model" and enter your API key manually.`;
+          }
+          
+          throw new Error(`API error: ${errorMsg}`);
+        }
+      } catch (e) {
+        return `Error: ${e.message}`;
+      }
     }
 
     // Custom models - require API key
