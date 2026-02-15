@@ -23,6 +23,7 @@ import webhookRoutes from './routes/webhooks.js';
 import healthRoutes from './routes/health.js';
 import scheduledTaskRoutes from './routes/scheduledTasks.js';
 import modelRoutes from './routes/models.js';
+import settingsRoutes from './routes/settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,6 +61,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/models', modelRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/scheduled-tasks', scheduledTaskRoutes);
+app.use('/api/settings', settingsRoutes);
 app.use('/health', healthRoutes);
 
 // Error handling

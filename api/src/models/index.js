@@ -113,6 +113,20 @@ async function createTables() {
     )
   `);
 
+  // API keys table for storing user API credentials
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      key_value TEXT NOT NULL,
+      is_default BOOLEAN DEFAULT 0,
+      metadata TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Scheduled tasks table
   await db.exec(`
     CREATE TABLE IF NOT EXISTS scheduled_tasks (
@@ -123,6 +137,7 @@ async function createTables() {
       schedule TEXT NOT NULL,
       action TEXT NOT NULL,
       model TEXT DEFAULT 'kimi-coding/k2p5',
+      api_key_id TEXT,
       enabled BOOLEAN DEFAULT 1,
       metadata TEXT,
       run_count INTEGER DEFAULT 0,
@@ -130,7 +145,8 @@ async function createTables() {
       last_error TEXT,
       last_error_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (api_key_id) REFERENCES api_keys(id)
     )
   `);
 

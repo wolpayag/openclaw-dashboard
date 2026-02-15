@@ -27,18 +27,32 @@ function ScheduledTasks() {
     type: 'system_status',
     schedule: { type: 'daily', time: '08:00' },
     model: 'kimi-coding/k2p5',
+    apiKeyId: '',
     enabled: true
   })
   const [availableModels, setAvailableModels] = useState([
     { id: 'kimi-coding/k2p5', name: 'Kimi K2.5', description: 'High quality, API cost' }
   ])
+  const [apiKeys, setApiKeys] = useState([])
+  const [editingTask, setEditingTask] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   useEffect(() => {
     loadTasks()
     loadAvailableModels()
+    loadApiKeys()
     const interval = setInterval(loadTasks, 30000) // Refresh every 30s
     return () => clearInterval(interval)
   }, [])
+
+  const loadApiKeys = async () => {
+    try {
+      const data = await api.get('/settings/api-keys')
+      setApiKeys(data.keys || [])
+    } catch (error) {
+      console.error('Failed to load API keys:', error)
+    }
+  }
 
   const loadAvailableModels = async () => {
     try {
@@ -138,6 +152,7 @@ function ScheduledTasks() {
         type: newTask.type,
         schedule: newTask.schedule,
         model: newTask.model,
+        apiKeyId: newTask.apiKeyId || null,
         enabled: newTask.enabled,
         action: action
       }
@@ -149,6 +164,7 @@ function ScheduledTasks() {
         type: 'system_status',
         schedule: { type: 'daily', time: '08:00' },
         model: 'kimi-coding/k2p5',
+        apiKeyId: '',
         enabled: true
       })
       loadTasks()
@@ -161,6 +177,69 @@ function ScheduledTasks() {
       setNotification({ 
         type: 'error', 
         message: 'Failed to create task' 
+      })
+    }
+  }
+
+  const openEditModal = (task) => {
+    setEditingTask(task)
+    setNewTask({
+      name: task.name,
+      description: task.description || '',
+      type: task.type,
+      schedule: task.schedule,
+      model: task.model,
+      apiKeyId: task.api_key_id || '',
+      enabled: task.enabled,
+      action: task.action || {}
+    })
+    setShowEditModal(true)
+  }
+
+  const updateTask = async (e) => {
+    e.preventDefault()
+    if (!editingTask) return
+    
+    try {
+      let action = { type: newTask.type }
+      
+      if (newTask.type === 'weather' && newTask.action?.location) {
+        action.location = newTask.action.location
+      }
+      
+      if (newTask.type === 'telegram_message' && newTask.action?.message) {
+        action.message = newTask.action.message
+      }
+      
+      if (newTask.type === 'ai_prompt') {
+        if (newTask.action?.prompt) action.prompt = newTask.action.prompt
+        if (newTask.action?.context) action.context = newTask.action.context
+      }
+      
+      const taskData = {
+        name: newTask.name,
+        description: newTask.description,
+        type: newTask.type,
+        schedule: newTask.schedule,
+        model: newTask.model,
+        apiKeyId: newTask.apiKeyId || null,
+        enabled: newTask.enabled,
+        action: action
+      }
+      
+      await api.patch(`/scheduled-tasks/${editingTask.id}`, taskData)
+      setShowEditModal(false)
+      setEditingTask(null)
+      loadTasks()
+      setNotification({ 
+        type: 'success', 
+        message: 'Task updated successfully!' 
+      })
+    } catch (error) {
+      console.error('Failed to update task:', error)
+      setNotification({ 
+        type: 'error', 
+        message: 'Failed to update task' 
       })
     }
   }
@@ -312,6 +391,16 @@ function ScheduledTasks() {
                     title={task.enabled ? 'Disable' : 'Enable'}
                   >
                     {task.enabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  </button>
+                  
+                  <button
+                    onClick={() => openEditModal(task)}
+                    className="p-1.5 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)]"
+                    title="Edit"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
                   </button>
                   
                   <button
@@ -475,6 +564,27 @@ function ScheduledTasks() {
                 </p>
               </div>
 
+              {(newTask.model === 'kimi-coding/k2p5' || newTask.model?.includes('kimi')) && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key</label>
+                  <select
+                    value={newTask.apiKeyId || ''}
+                    onChange={(e) => setNewTask({...newTask, apiKeyId: e.target.value})}
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                  >
+                    <option value="">Select API Key...</option>
+                    {apiKeys.filter(k => k.provider === 'moonshot' || k.provider === 'kimi').map(key => (
+                      <option key={key.id} value={key.id}>{key.name}</option>
+                    ))}
+                  </select>
+                  {apiKeys.filter(k => k.provider === 'moonshot' || k.provider === 'kimi').length === 0 && (
+                    <p className="text-xs text-orange-500 mt-1">
+                      No API keys found. Add one in Settings.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {newTask.type === 'ai_prompt' && (
                 <>
                   <div>
@@ -535,6 +645,218 @@ function ScheduledTasks() {
                   className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
                 >
                   Create Task
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--bg-primary)] rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Edit Scheduled Task</h3>
+            
+            <form onSubmit={updateTask} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Name</label>
+                <input
+                  type="text"
+                  value={newTask.name}
+                  onChange={(e) => setNewTask({...newTask, name: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Description</label>
+                <input
+                  type="text"
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Task Type</label>
+                <select
+                  value={newTask.type}
+                  onChange={(e) => setNewTask({...newTask, type: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                >
+                  <option value="system_status">System Status Report</option>
+                  <option value="weather">Weather Report</option>
+                  <option value="telegram_message">Custom Telegram Message</option>
+                  <option value="ai_prompt">AI Prompt (Ask AI anything)</option>
+                </select>
+              </div>
+
+              {newTask.type === 'weather' && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Location</label>
+                  <input
+                    type="text"
+                    value={newTask.action?.location || 'Vienna'}
+                    onChange={(e) => setNewTask({
+                      ...newTask, 
+                      action: { ...newTask.action, location: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                  />
+                </div>
+              )}
+
+              {newTask.type === 'telegram_message' && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Message</label>
+                  <textarea
+                    value={newTask.action?.message || ''}
+                    onChange={(e) => setNewTask({
+                      ...newTask, 
+                      action: { ...newTask.action, message: e.target.value }
+                    })}
+                    rows={3}
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                  />
+                </div>
+              )}
+
+              {newTask.type === 'ai_prompt' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">AI Prompt *</label>
+                    <textarea
+                      value={newTask.action?.prompt || ''}
+                      onChange={(e) => setNewTask({
+                        ...newTask, 
+                        action: { ...newTask.action, prompt: e.target.value }
+                      })}
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Context (optional)</label>
+                    <input
+                      type="text"
+                      value={newTask.action?.context || ''}
+                      onChange={(e) => setNewTask({
+                        ...newTask, 
+                        action: { ...newTask.action, context: e.target.value }
+                      })}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                    />
+                  </div>
+                </>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Schedule Type</label>
+                <select
+                  value={newTask.schedule.type}
+                  onChange={(e) => setNewTask({
+                    ...newTask, 
+                    schedule: { ...newTask.schedule, type: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                >
+                  <option value="daily">Daily at specific time</option>
+                  <option value="interval">Every X minutes</option>
+                </select>
+              </div>
+              
+              {newTask.schedule.type === 'daily' && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Time</label>
+                  <input
+                    type="time"
+                    value={newTask.schedule.time}
+                    onChange={(e) => setNewTask({
+                      ...newTask, 
+                      schedule: { ...newTask.schedule, time: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                  />
+                </div>
+              )}
+              
+              {newTask.schedule.type === 'interval' && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Interval (minutes)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1440"
+                    value={newTask.schedule.interval || 30}
+                    onChange={(e) => setNewTask({
+                      ...newTask, 
+                      schedule: { ...newTask.schedule, interval: parseInt(e.target.value) }
+                    })}
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                  />
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Model (for AI tasks)</label>
+                <select
+                  value={newTask.model || 'kimi-coding/k2p5'}
+                  onChange={(e) => setNewTask({...newTask, model: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                >
+                  {availableModels.map(model => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {(newTask.model === 'kimi-coding/k2p5' || newTask.model?.includes('kimi')) && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key</label>
+                  <select
+                    value={newTask.apiKeyId || ''}
+                    onChange={(e) => setNewTask({...newTask, apiKeyId: e.target.value})}
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                  >
+                    <option value="">Select API Key...</option>
+                    {apiKeys.filter(k => k.provider === 'moonshot' || k.provider === 'kimi').map(key => (
+                      <option key={key.id} value={key.id}>{key.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="enabled-edit"
+                  checked={newTask.enabled}
+                  onChange={(e) => setNewTask({...newTask, enabled: e.target.checked})}
+                  className="rounded border-[var(--border-color)]"
+                />
+                <label htmlFor="enabled-edit" className="text-sm text-[var(--text-primary)]">Enabled</label>
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowEditModal(false); setEditingTask(null); }}
+                  className="flex-1 px-4 py-2 border border-[var(--border-color)] rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

@@ -77,7 +77,7 @@ export const ModelService = {
     return models;
   },
 
-  async generateWithModel(modelId, prompt, context = '') {
+  async generateWithModel(modelId, prompt, context = '', apiKey = null) {
     const fullPrompt = context ? `${context}\n\n${prompt}` : prompt;
 
     // Local Ollama models
@@ -125,19 +125,14 @@ export const ModelService = {
       throw new Error('No local model endpoint available');
     }
 
-    // Cloud models - try to call actual AI API
+    // Cloud models - use provided API key or fall back to env
     if (modelId === 'kimi-coding/k2p5' || modelId.includes('kimi')) {
-      const apiKey = process.env.MOONSHOT_API_KEY || process.env.OPENCLAW_MOONSHOT_KEY;
+      const keyToUse = apiKey || process.env.MOONSHOT_API_KEY || process.env.OPENCLAW_MOONSHOT_KEY;
       
-      if (!apiKey) {
-        // No API key available - return clear message
+      if (!keyToUse) {
         return `⚠️ *AI Response Unavailable*\n\n` +
           `Prompt: "${prompt}"\n\n` +
-          `To get real AI responses, please set the MOONSHOT_API_KEY environment variable:\n` +
-          `\`export MOONSHOT_API_KEY=your_key_here\`\n\n` +
-          `Alternatively, install Ollama for free local AI:\n` +
-          `\`curl -fsSL https://ollama.com/install.sh | sh\`\n` +
-          `\`ollama pull llama3.2\``;
+          `No API key configured. Please add a Moonshot API key in Settings > API Keys.`;
       }
 
       try {
@@ -145,7 +140,7 @@ export const ModelService = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
+            'Authorization': `Bearer ${keyToUse}`
           },
           body: JSON.stringify({
             model: 'kimi-k2-5',

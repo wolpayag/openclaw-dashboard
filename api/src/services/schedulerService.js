@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { logger } from '../utils/logger.js';
 import { ScheduledTaskRepository } from '../models/scheduledTasks.js';
+import { ApiKeyRepository } from '../models/apiKeys.js';
 import { broadcastToAll } from '../websocket/index.js';
 import { message } from '../utils/message.js';
 import { ModelService } from './models.js';
@@ -270,11 +271,21 @@ export const SchedulerService = {
       const context = task.action.context || '';
       const model = task.model || 'kimi-coding/k2p5';
       
+      let apiKey = null;
+      
+      // Fetch API key if specified
+      if (task.api_key_id) {
+        const keyData = await ApiKeyRepository.findById(task.api_key_id);
+        if (keyData) {
+          apiKey = keyData.key_value;
+        }
+      }
+      
       let aiResponse;
       
       try {
-        // Use ModelService to generate response
-        aiResponse = await ModelService.generateWithModel(model, prompt, context);
+        // Use ModelService to generate response with API key
+        aiResponse = await ModelService.generateWithModel(model, prompt, context, apiKey);
         logger.info(`Generated AI response using ${model}`);
       } catch (error) {
         logger.error('AI generation failed:', error.message);
