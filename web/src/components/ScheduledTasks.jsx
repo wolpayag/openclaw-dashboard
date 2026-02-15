@@ -28,6 +28,7 @@ function ScheduledTasks() {
     schedule: { type: 'daily', time: '08:00' },
     model: 'kimi-coding/k2p5',
     apiKey: '',
+    customModelId: '',
     enabled: true
   })
   const [availableModels, setAvailableModels] = useState([
@@ -142,6 +143,7 @@ function ScheduledTasks() {
         schedule: newTask.schedule,
         model: newTask.model,
         apiKey: newTask.apiKey || null,
+        customModelId: newTask.customModelId || null,
         enabled: newTask.enabled,
         action: action
       }
@@ -154,6 +156,7 @@ function ScheduledTasks() {
         schedule: { type: 'daily', time: '08:00' },
         model: 'kimi-coding/k2p5',
         apiKey: '',
+        customModelId: '',
         enabled: true
       })
       loadTasks()
@@ -179,6 +182,7 @@ function ScheduledTasks() {
       schedule: task.schedule,
       model: task.model,
       apiKey: task.api_key || '',
+      customModelId: task.custom_model_id || '',
       enabled: task.enabled,
       action: task.action || {}
     })
@@ -212,6 +216,7 @@ function ScheduledTasks() {
         schedule: newTask.schedule,
         model: newTask.model,
         apiKey: newTask.apiKey || null,
+        customModelId: newTask.customModelId || null,
         enabled: newTask.enabled,
         action: action
       }
@@ -558,22 +563,39 @@ function ScheduledTasks() {
                 </p>
               </div>
 
-              {/* Show API key field only for custom models */}
-              {newTask.model?.startsWith('custom-') && (
-                <div>
-                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key *</label>
-                  <input
-                    type="password"
-                    value={newTask.apiKey || ''}
-                    onChange={(e) => setNewTask({...newTask, apiKey: e.target.value})}
-                    placeholder="Enter your API key..."
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
-                    required
-                  />
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">
-                    Your API key is stored securely with this task
-                  </p>
-                </div>
+              {/* Show API key and model ID fields only for custom models */}
+              {newTask.model === 'custom' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Model ID *</label>
+                    <input
+                      type="text"
+                      value={newTask.customModelId || ''}
+                      onChange={(e) => setNewTask({...newTask, customModelId: e.target.value})}
+                      placeholder="e.g., gpt-4, claude-3-sonnet, kimi-k2-5"
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                      required
+                    />
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      Examples: gpt-4, gpt-3.5-turbo, claude-3-opus, kimi-k2-5
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key *</label>
+                    <input
+                      type="password"
+                      value={newTask.apiKey || ''}
+                      onChange={(e) => setNewTask({...newTask, apiKey: e.target.value})}
+                      placeholder="Enter your API key..."
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                      required
+                    />
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      Works with OpenAI, Anthropic, Moonshot, etc.
+                    </p>
+                  </div>
+                </>
               )}
 
               {newTask.type === 'ai_prompt' && (
@@ -813,21 +835,37 @@ function ScheduledTasks() {
                 </select>
               </div>
 
-              {/* Show API key field only for custom models */}
-              {newTask.model?.startsWith('custom-') && (
-                <div>
-                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key</label>
-                  <input
-                    type="password"
-                    value={newTask.apiKey || ''}
-                    onChange={(e) => setNewTask({...newTask, apiKey: e.target.value})}
-                    placeholder="Enter your API key..."
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
-                  />
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">
-                    Leave blank to keep existing key
-                  </p>
-                </div>
+              {/* Show API key and model ID fields only for custom models */}
+              {newTask.model === 'custom' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Model ID</label>
+                    <input
+                      type="text"
+                      value={newTask.customModelId || ''}
+                      onChange={(e) => setNewTask({...newTask, customModelId: e.target.value})}
+                      placeholder="e.g., gpt-4, claude-3-sonnet, kimi-k2-5"
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                    />
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      Examples: gpt-4, gpt-3.5-turbo, claude-3-opus, kimi-k2-5
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">API Key</label>
+                    <input
+                      type="password"
+                      value={newTask.apiKey || ''}
+                      onChange={(e) => setNewTask({...newTask, apiKey: e.target.value})}
+                      placeholder="Enter new API key (leave blank to keep existing)"
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
+                    />
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      Leave blank to keep existing key
+                    </p>
+                  </div>
+                </>
               )}
               
               <div className="flex items-center gap-2">

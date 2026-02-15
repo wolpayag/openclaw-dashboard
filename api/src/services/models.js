@@ -4,6 +4,13 @@ import { ConfigService } from './config.js';
 
 const execAsync = promisify(exec);
 
+// API endpoints for different providers
+const API_ENDPOINTS = {
+  'moonshot': 'https://api.moonshot.cn/v1/chat/completions',
+  'openai': 'https://api.openai.com/v1/chat/completions',
+  'anthropic': 'https://api.anthropic.com/v1/messages'
+};
+
 export const ModelService = {
   async getAvailableModels() {
     // Get pre-configured models from OpenClaw config
@@ -11,19 +18,18 @@ export const ModelService = {
     
     const models = [];
     
-    // Configured models (may need API key via custom model)
+    // Configured models
     if (configuredModels.length > 0) {
-      models.push({ id: 'header-configured', name: 'Configured Models', type: 'header', disabled: true });
+      models.push({ id: 'header-configured', name: '─── Configured ───', type: 'header', disabled: true });
       models.push(...configuredModels.map(m => ({
         ...m,
-        description: '⚠️ May need custom API key (see below)'
+        description: 'Uses OpenClaw config (may need manual key)'
       })));
     }
     
     // Local models section
     const localModels = [];
     
-    // Check for Ollama
     try {
       const { stdout } = await execAsync('ollama list 2>/dev/null || echo ""');
       if (stdout) {
@@ -36,7 +42,7 @@ export const ModelService = {
               id: `ollama:${modelName}`,
               name: `${modelName} (Local)`,
               type: 'local',
-              description: 'Runs locally, no API cost'
+              description: 'Free, runs on your machine'
             });
           }
         }
@@ -46,29 +52,25 @@ export const ModelService = {
     }
     
     if (localModels.length > 0) {
-      models.push({ id: 'header-local', name: 'Local Models', type: 'header', disabled: true });
+      models.push({ id: 'header-local', name: '─── Local Models ───', type: 'header', disabled: true });
       models.push(...localModels);
     }
     
-    // Custom/External models (need API key)
-    models.push({ id: 'header-custom', name: 'Custom Models', type: 'header', disabled: true });
+    // Custom/External models
+    models.push({ id: 'header-custom', name: '─── Custom API ───', type: 'header', disabled: true });
     models.push({ 
-      id: 'custom-kimi', 
-      name: 'Kimi K2.5 (with API key)', 
+      id: 'custom', 
+      name: 'Any Model (custom API)', 
       type: 'custom',
-      provider: 'moonshot',
-      description: 'Requires your own API key'
+      description: 'Use any model with your own API key'
     });
 
     return models;
   },
 
-  async generateWithModel(modelId, prompt, context = '', apiKey = null) {
+  async generateWithModel(modelId, prompt, context = '', apiKey = null, customModelId = null) {
     const fullPrompt = context ? `${context}\n\n${prompt}` : prompt;
 
-    // Check if this is a pre-configured model
-    const isConfigured = ConfigService.isModelConfigured(modelId);
-    
     // Local Ollama models
     if (modelId.startsWith('ollama:')) {
       const modelName = modelId.replace('ollama:', '');
@@ -83,27 +85,20 @@ export const ModelService = {
       }
     }
 
-    // For configured models - get API key from OpenClaw's auth profiles
+    // Check if this is a pre-configured model
+    const isConfigured = ConfigService.isModelConfigured(modelId);
+    
     if (isConfigured) {
-      // Get provider from model ID (e.g., "kimi-coding/k2p5" -> "kimi-coding")
       const provider = modelId.split('/')[0];
-      
-      // Try to get API key from OpenClaw's stored credentials
       const openclawKey = ConfigService.getApiKeyForProvider(provider);
-      
-      // Use provided key, OpenClaw key, or env var
       const keyToUse = apiKey || openclawKey || process.env.MOONSHOT_API_KEY;
       
       if (!keyToUse) {
-        return `⚠️ *API Key Not Available*\n\n` +
-          `The model is configured in OpenClaw, but the API key could not be read.\n\n` +
-          `Options:\n` +
-          `1. Use "Custom Model" and provide your own API key\n` +
-          `2. Set MOONSHOT_API_KEY environment variable`;
+        return `⚠️ *API Key Required*\n\nPlease use "Any Model (custom API)" and enter your API key.`;
       }
 
       try {
-        const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+        const response = await fetch(API_ENDPOINTS['moonshot'], {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -119,58 +114,74 @@ export const ModelService = {
 
         if (response.ok) {
           const data = await response.json();
-          return data.choices?.[0]?.message?.content || 'No response from AI';
+          return data.choices?.[0]?.message?.content || 'No response';
         } else {
-          const errorData = await response.json().catch(() => ({}));
-          const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
-          
-          if (errorMsg.includes('Invalid') || response.status === 401) {
-            return `⚠️ *API Key Issue*\n\n` +
-              `The stored API key could not be used directly.\n\n` +
-              `Workaround: Use "Custom Model" and enter your API key manually.`;
-          }
-          
-          throw new Error(`API error: ${errorMsg}`);
+          return `⚠️ *API Error*\n\nThe configured key didn't work. Use "Any Model (custom API)" instead.`;
         }
       } catch (e) {
         return `Error: ${e.message}`;
       }
     }
 
-    // Custom models - require API key
-    if (modelId.startsWith('custom-') || modelId.includes('kimi')) {
+    // Custom model - use provided API key
+    if (modelId === 'custom') {
       if (!apiKey) {
-        return `⚠️ *API Key Required*\n\n` +
-          `Please enter your API key to use this model.`;
+        return `⚠️ *API Key Required*\n\nPlease enter your API key.`;
       }
 
+      // Detect provider from model ID or use OpenAI format as default
+      const actualModelId = customModelId || 'gpt-3.5-turbo';
+      const isAnthropic = actualModelId.includes('claude');
+      const isMoonshot = actualModelId.includes('kimi');
+      
       try {
-        const response = await fetch('https://api.moonshot.cn/v1/chat/completions', {
-          method: 'POST',
-          headers: {
+        let endpoint, body, headers;
+        
+        if (isAnthropic) {
+          // Anthropic/Claude format
+          endpoint = API_ENDPOINTS['anthropic'];
+          headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+          };
+          body = JSON.stringify({
+            model: actualModelId,
+            max_tokens: 1000,
+            messages: [{ role: 'user', content: fullPrompt }]
+          });
+        } else {
+          // OpenAI-compatible format (works for OpenAI, Moonshot, etc.)
+          endpoint = isMoonshot ? API_ENDPOINTS['moonshot'] : API_ENDPOINTS['openai'];
+          headers = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: 'kimi-k2-5',
+          };
+          body = JSON.stringify({
+            model: actualModelId,
             messages: [{ role: 'user', content: fullPrompt }],
             temperature: 0.7,
             max_tokens: 1000
-          })
-        });
+          });
+        }
+
+        const response = await fetch(endpoint, { method: 'POST', headers, body });
 
         if (response.ok) {
           const data = await response.json();
-          return data.choices?.[0]?.message?.content || 'No response from AI';
+          if (isAnthropic) {
+            return data.content?.[0]?.text || 'No response';
+          }
+          return data.choices?.[0]?.message?.content || 'No response';
         } else {
           const errorData = await response.json().catch(() => ({}));
           const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
           
-          if (errorMsg.includes('Invalid') || response.status === 401) {
+          if (response.status === 401) {
             return `⚠️ *Invalid API Key*\n\nPlease check your API key.`;
           }
           
-          throw new Error(`API error: ${errorMsg}`);
+          return `⚠️ *API Error*\n\n${errorMsg}`;
         }
       } catch (e) {
         return `Error: ${e.message}`;
@@ -178,9 +189,5 @@ export const ModelService = {
     }
 
     return `Model ${modelId} not supported`;
-  },
-
-  isPreConfigured(modelId) {
-    return ConfigService.isModelConfigured(modelId);
   }
 };

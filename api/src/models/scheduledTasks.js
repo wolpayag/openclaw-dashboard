@@ -52,9 +52,9 @@ export const ScheduledTaskRepository = {
 
     await db.run(`
       INSERT INTO scheduled_tasks (
-        id, name, description, type, schedule, action, model, api_key,
+        id, name, description, type, schedule, action, model, api_key, custom_model_id,
         enabled, metadata, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       taskData.name,
@@ -64,6 +64,7 @@ export const ScheduledTaskRepository = {
       JSON.stringify(taskData.action || {}),
       taskData.model || 'kimi-coding/k2p5',
       taskData.apiKey || null,
+      taskData.customModelId || null,
       taskData.enabled ? 1 : 0,
       taskData.metadata ? JSON.stringify(taskData.metadata) : null,
       now,
@@ -106,6 +107,11 @@ export const ScheduledTaskRepository = {
     if (updates.apiKey !== undefined) {
       fields.push('api_key = ?');
       values.push(updates.apiKey);
+    }
+
+    if (updates.customModelId !== undefined) {
+      fields.push('custom_model_id = ?');
+      values.push(updates.customModelId);
     }
 
     if (updates.enabled !== undefined) {

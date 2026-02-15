@@ -270,15 +270,14 @@ export const SchedulerService = {
       const prompt = task.action.prompt || 'Hello!';
       const context = task.action.context || '';
       const model = task.model || 'kimi-coding/k2p5';
-      
-      // Use API key from task if provided
       const apiKey = task.api_key || null;
+      const customModelId = task.custom_model_id || null;
       
       let aiResponse;
       
       try {
-        // Use ModelService to generate response with API key
-        aiResponse = await ModelService.generateWithModel(model, prompt, context, apiKey);
+        // Use ModelService to generate response with API key and custom model ID
+        aiResponse = await ModelService.generateWithModel(model, prompt, context, apiKey, customModelId);
         logger.info(`Generated AI response using ${model}`);
       } catch (error) {
         logger.error('AI generation failed:', error.message);

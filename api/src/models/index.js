@@ -138,6 +138,7 @@ async function createTables() {
       action TEXT NOT NULL,
       model TEXT DEFAULT 'kimi-coding/k2p5',
       api_key TEXT,
+      custom_model_id TEXT,
       enabled BOOLEAN DEFAULT 1,
       metadata TEXT,
       run_count INTEGER DEFAULT 0,
