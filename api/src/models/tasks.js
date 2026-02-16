@@ -125,14 +125,14 @@ export const TaskRepository = {
       values.push(updates.errorMessage);
     }
 
-    if (updates.githubRepo !== undefined) {
+    if (updates.githubRepo !== undefined || updates.github_repo !== undefined) {
       fields.push('github_repo = ?');
-      values.push(updates.githubRepo);
+      values.push(updates.githubRepo || updates.github_repo || null);
     }
 
-    if (updates.githubUrl !== undefined) {
+    if (updates.githubUrl !== undefined || updates.github_url !== undefined) {
       fields.push('github_url = ?');
-      values.push(updates.githubUrl);
+      values.push(updates.githubUrl || updates.github_url || null);
     }
 
     if (updates.metadata) {
