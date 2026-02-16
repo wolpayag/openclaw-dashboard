@@ -31,9 +31,9 @@ function Dashboard() {
     loadDashboardData()
   }, [])
 
-  // Update when live tasks change
+  // Update when live tasks change - this handles real-time updates including progress
   useEffect(() => {
-    if (liveTasks?.length > 0) {
+    if (liveTasks) {
       categorizeTasks(liveTasks)
     }
   }, [liveTasks])

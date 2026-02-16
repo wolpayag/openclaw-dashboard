@@ -21,6 +21,11 @@ export const TaskService = {
   async createTask(taskData) {
     logger.info('Creating new task', { title: taskData.title });
     
+    // Ensure progress starts at 0 for new tasks
+    if (!taskData.progress && taskData.progress !== 0) {
+      taskData.progress = 0;
+    }
+    
     const task = await TaskRepository.create(taskData);
     
     await EventRepository.create({
@@ -29,8 +34,9 @@ export const TaskService = {
       metadata: { taskId: task.id }
     });
 
-    // Broadcast updated stats
+    // Broadcast updated stats and the new task
     await this.broadcastStatsUpdate();
+    broadcastToAll('task:update', task);
 
     return task;
   },
@@ -42,6 +48,7 @@ export const TaskService = {
     }
 
     const previousStatus = existing.status;
+    const previousProgress = existing.progress;
     const task = await TaskRepository.update(id, updates);
 
     // Log status changes
@@ -62,8 +69,9 @@ export const TaskService = {
       }
     }
 
-    // Broadcast updated stats
+    // Broadcast updated stats and the updated task (for real-time progress updates)
     await this.broadcastStatsUpdate();
+    broadcastToAll('task:update', task);
 
     return task;
   },
@@ -76,8 +84,9 @@ export const TaskService = {
 
     await TaskRepository.delete(id);
     
-    // Broadcast updated stats
+    // Broadcast updated stats and deletion event
     await this.broadcastStatsUpdate();
+    broadcastToAll('task:deleted', { id });
     
     return { deleted: true };
   },
@@ -102,7 +111,8 @@ export const TaskService = {
   async assignTask(taskId, agentId) {
     const task = await TaskRepository.update(taskId, {
       agentId,
-      status: 'in_progress'
+      status: 'in_progress',
+      progress: 0  // Reset progress when task starts
     });
 
     await AgentRepository.update(agentId, {
@@ -110,8 +120,9 @@ export const TaskService = {
       currentTaskId: taskId
     });
 
-    // Broadcast updated stats
+    // Broadcast updated stats and the updated task
     await this.broadcastStatsUpdate();
+    broadcastToAll('task:update', task);
 
     return task;
   }

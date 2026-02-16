@@ -55,12 +55,30 @@ export const OpenClawIntegration = {
       // Use sessionKey directly as ID - this prevents duplicates
       const existing = await AgentRepository.findById(sessionKey);
       
+      // Determine model - use session data or inherit from parent if subagent
+      let modelProvider = session.modelProvider;
+      let model = session.model;
+      
+      // For subagents without model info, try to get from parent session
+      if ((!modelProvider || !model) && session.spawnedBy) {
+        const sessions = this.readSessionsFile();
+        const parentSession = sessions[session.spawnedBy];
+        if (parentSession) {
+          modelProvider = parentSession.modelProvider || 'unknown';
+          model = parentSession.model || 'default';
+        }
+      }
+      
+      const modelString = modelProvider && model 
+        ? `${modelProvider}/${model}`
+        : modelProvider || model || 'unknown/default';
+      
       const agentData = {
         id: sessionKey,  // Use the session key as the ID
-        name: session.origin?.label || sessionKey.split(':').pop() || 'Unknown Agent',
+        name: session.origin?.label || session.label || sessionKey.split(':').pop() || 'Unknown Agent',
         type: session.chatType || 'direct',
         status: 'active',
-        model: `${session.modelProvider}/${session.model}`,
+        model: modelString,
         reasoning_enabled: false,
         lastSeenAt: new Date(session.updatedAt).toISOString(),
         stats: JSON.stringify({
@@ -69,7 +87,7 @@ export const OpenClawIntegration = {
           totalTokens: session.totalTokens || 0,
           contextTokens: session.contextTokens || 262144,
           channel: session.lastChannel,
-          provider: session.modelProvider
+          provider: modelProvider
         })
       };
 
