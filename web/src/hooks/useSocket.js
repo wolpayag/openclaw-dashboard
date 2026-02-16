@@ -12,6 +12,7 @@ export function useSocket() {
     addEvent, 
     setConnected,
     updateTask,
+    removeTask,
     updateAgent 
   } = useDashboardStore()
 
@@ -45,6 +46,10 @@ export function useSocket() {
 
     socket.on('task:update', (task) => {
       updateTask(task)
+    })
+
+    socket.on('task:deleted', ({ id }) => {
+      removeTask(id)
     })
 
     socket.on('agent:update', (agent) => {

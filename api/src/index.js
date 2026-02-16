@@ -24,6 +24,9 @@ import healthRoutes from './routes/health.js';
 import scheduledTaskRoutes from './routes/scheduledTasks.js';
 import modelRoutes from './routes/models.js';
 import settingsRoutes from './routes/settings.js';
+import memoryRoutes from './routes/memory.js';
+import logsRoutes from './routes/logs.js';
+import cronRoutes from './routes/cron.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +65,9 @@ app.use('/api/models', modelRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/scheduled-tasks', scheduledTaskRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/memory', memoryRoutes);
+app.use('/api/logs', logsRoutes);
+app.use('/api/cron', cronRoutes);
 app.use('/health', healthRoutes);
 
 // Error handling

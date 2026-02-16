@@ -9,7 +9,10 @@ import {
   Moon,
   Sun,
   Wifi,
-  WifiOff
+  WifiOff,
+  BookOpen,
+  Terminal,
+  Clock
 } from 'lucide-react'
 import { useThemeStore, useDashboardStore } from '../store/themeStore'
 
@@ -19,6 +22,9 @@ const navItems = [
   { path: '/agents', icon: Bot, label: 'Agents' },
   { path: '/usage', icon: BarChart3, label: 'Usage' },
   { path: '/models', icon: Brain, label: 'Models' },
+  { path: '/memory', icon: BookOpen, label: 'Memory' },
+  { path: '/logs', icon: Terminal, label: 'Logs' },
+  { path: '/cron-jobs', icon: Clock, label: 'Cron Jobs' },
 ]
 
 function Layout({ children }) {

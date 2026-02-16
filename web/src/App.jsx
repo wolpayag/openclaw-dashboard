@@ -9,6 +9,9 @@ import Agents from './pages/Agents'
 import Usage from './pages/Usage'
 import Models from './pages/Models'
 import Settings from './pages/Settings'
+import Memory from './pages/Memory'
+import Logs from './pages/Logs'
+import CronJobs from './pages/CronJobs'
 
 function App() {
   const { isDark } = useThemeStore()
@@ -31,6 +34,9 @@ function App() {
         <Route path="/usage" element={<Usage />} />
         <Route path="/models" element={<Models />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/memory" element={<Memory />} />
+        <Route path="/logs" element={<Logs />} />
+        <Route path="/cron-jobs" element={<CronJobs />} />
       </Routes>
     </Layout>
   )

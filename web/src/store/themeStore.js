@@ -29,6 +29,10 @@ export const useDashboardStore = create((set, get) => ({
     tasks: state.tasks.map(t => t.id === task.id ? { ...t, ...task } : t)
   })),
   
+  removeTask: (id) => set((state) => ({
+    tasks: state.tasks.filter(t => t.id !== id)
+  })),
+  
   updateAgent: (agent) => set((state) => ({
     agents: state.agents.map(a => a.id === agent.id ? { ...a, ...agent } : a)
   })),
