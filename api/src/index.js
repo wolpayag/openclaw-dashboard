@@ -27,6 +27,7 @@ import settingsRoutes from './routes/settings.js';
 import memoryRoutes from './routes/memory.js';
 import logsRoutes from './routes/logs.js';
 import cronRoutes from './routes/cron.js';
+import githubRoutes from './routes/github.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,6 +60,7 @@ app.use(requestLogger);
 
 // Routes
 app.use('/api/tasks', taskRoutes);
+app.use('/api/tasks', githubRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/models', modelRoutes);
