@@ -52,6 +52,12 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   res.json(task);
 }));
 
+// PUT /api/scheduled-tasks/:id - Update task (full update)
+router.put('/:id', asyncHandler(async (req, res) => {
+  const task = await SchedulerService.updateTask(req.params.id, req.body);
+  res.json(task);
+}));
+
 // POST /api/scheduled-tasks/:id/run - Run task manually
 router.post('/:id/run', asyncHandler(async (req, res) => {
   const task = await ScheduledTaskRepository.findById(req.params.id);
