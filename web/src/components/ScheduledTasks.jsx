@@ -571,7 +571,7 @@ function ScheduledTasks() {
                     <input
                       type="text"
                       value={newTask.customModelId || ''}
-                      onChange={(e) => setNewTask({...newTask, customModelId: e.target.value})}
+                      onChange={(e) => setNewTask({...newTask, customModelId: e.target.value.trim()})}
                       placeholder="e.g., gpt-4, claude-3-sonnet, kimi-k2-5"
                       className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
                       required
@@ -586,7 +586,7 @@ function ScheduledTasks() {
                     <input
                       type="password"
                       value={newTask.apiKey || ''}
-                      onChange={(e) => setNewTask({...newTask, apiKey: e.target.value})}
+                      onChange={(e) => setNewTask({...newTask, apiKey: e.target.value.trim()})}
                       placeholder="Enter your API key..."
                       className="w-full px-3 py-2 rounded-lg border border-[var(--border-color)] bg-[var(--bg-secondary)] text-[var(--text-primary)]"
                       required

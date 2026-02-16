@@ -129,10 +129,13 @@ export const ModelService = {
         return `⚠️ *API Key Required*\n\nPlease enter your API key.`;
       }
 
-      // Detect provider from model ID or use OpenAI format as default
-      const actualModelId = customModelId || 'gpt-3.5-turbo';
-      const isAnthropic = actualModelId.includes('claude');
-      const isMoonshot = actualModelId.includes('kimi');
+      // Trim whitespace from inputs
+      const trimmedApiKey = apiKey.trim();
+      const trimmedModelId = (customModelId || 'gpt-3.5-turbo').trim();
+      
+      // Detect provider from model ID
+      const isAnthropic = trimmedModelId.includes('claude');
+      const isMoonshot = trimmedModelId.includes('kimi');
       
       try {
         let endpoint, body, headers;
@@ -142,11 +145,11 @@ export const ModelService = {
           endpoint = API_ENDPOINTS['anthropic'];
           headers = {
             'Content-Type': 'application/json',
-            'x-api-key': apiKey,
+            'x-api-key': trimmedApiKey,
             'anthropic-version': '2023-06-01'
           };
           body = JSON.stringify({
-            model: actualModelId,
+            model: trimmedModelId,
             max_tokens: 1000,
             messages: [{ role: 'user', content: fullPrompt }]
           });
@@ -155,10 +158,10 @@ export const ModelService = {
           endpoint = isMoonshot ? API_ENDPOINTS['moonshot'] : API_ENDPOINTS['openai'];
           headers = {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
+            'Authorization': `Bearer ${trimmedApiKey}`
           };
           body = JSON.stringify({
-            model: actualModelId,
+            model: trimmedModelId,
             messages: [{ role: 'user', content: fullPrompt }],
             temperature: 0.7,
             max_tokens: 1000
@@ -178,7 +181,7 @@ export const ModelService = {
           const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
           
           if (response.status === 401) {
-            return `⚠️ *Invalid API Key*\n\nPlease check your API key.`;
+            return `⚠️ *Invalid API Key*\n\nPlease check your API key is correct and active.`;
           }
           
           return `⚠️ *API Error*\n\n${errorMsg}`;
