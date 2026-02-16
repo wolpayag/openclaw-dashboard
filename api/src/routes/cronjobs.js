@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const CRON_JOBS_FILE = '/home/paul/.openclaw/cron/jobs.json';
 
@@ -9,44 +10,31 @@ const router = Router();
 // Read cron jobs from file
 function readCronJobs() {
   try {
-    if (!existsSync(CRON_JOBS_FILE)) {
-      return [];
-    }
     const content = readFileSync(CRON_JOBS_FILE, 'utf-8');
     const data = JSON.parse(content);
     return data.jobs || [];
   } catch (error) {
-    console.error('Error reading cron jobs:', error.message);
     return [];
   }
 }
 
 // Write cron jobs to file
 function writeCronJobs(jobs) {
-  try {
-    const data = {
-      version: 1,
-      jobs
-    };
-    writeFileSync(CRON_JOBS_FILE, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error('Error writing cron jobs:', error.message);
-  }
-}
-
-// Generate simple ID
-function generateId() {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const data = {
+    version: 1,
+    jobs
+  };
+  writeFileSync(CRON_JOBS_FILE, JSON.stringify(data, null, 2));
 }
 
 // GET /api/cron/jobs - List all cron jobs
-router.get('/jobs', asyncHandler(async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   const jobs = readCronJobs();
   res.json({ jobs, count: jobs.length });
 }));
 
 // POST /api/cron/jobs - Create new cron job
-router.post('/jobs', asyncHandler(async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const { name, schedule, command, enabled = true } = req.body;
   
   if (!name || !schedule || !command) {
@@ -55,7 +43,7 @@ router.post('/jobs', asyncHandler(async (req, res) => {
 
   const jobs = readCronJobs();
   const newJob = {
-    id: generateId(),
+    id: uuidv4(),
     name,
     schedule,
     command,
@@ -70,7 +58,7 @@ router.post('/jobs', asyncHandler(async (req, res) => {
 }));
 
 // PATCH /api/cron/jobs/:id - Update cron job
-router.patch('/jobs/:id', asyncHandler(async (req, res) => {
+router.patch('/:id', asyncHandler(async (req, res) => {
   const jobs = readCronJobs();
   const jobIndex = jobs.findIndex(j => j.id === req.params.id);
   
@@ -85,7 +73,7 @@ router.patch('/jobs/:id', asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/cron/jobs/:id - Delete cron job
-router.delete('/jobs/:id', asyncHandler(async (req, res) => {
+router.delete('/:id', asyncHandler(async (req, res) => {
   const jobs = readCronJobs();
   const filteredJobs = jobs.filter(j => j.id !== req.params.id);
   
@@ -98,7 +86,7 @@ router.delete('/jobs/:id', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/cron/jobs/:id/run - Run job now
-router.post('/jobs/:id/run', asyncHandler(async (req, res) => {
+router.post('/:id/run', asyncHandler(async (req, res) => {
   const jobs = readCronJobs();
   const job = jobs.find(j => j.id === req.params.id);
   
@@ -106,6 +94,8 @@ router.post('/jobs/:id/run', asyncHandler(async (req, res) => {
     return res.status(404).json({ error: 'Job not found' });
   }
   
+  // In a real implementation, this would trigger the job
+  // For now, just update the last run info
   job.lastRun = new Date().toISOString();
   job.lastStatus = 'success';
   writeCronJobs(jobs);
