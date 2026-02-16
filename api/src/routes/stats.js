@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { StatsService } from '../services/stats.js';
+import { EventRepository } from '../models/events.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
@@ -40,6 +41,15 @@ router.get('/errors', asyncHandler(async (req, res) => {
 router.get('/health', asyncHandler(async (req, res) => {
   const health = await StatsService.getSystemHealth();
   res.json(health);
+}));
+
+// POST /api/stats/clear-alerts - Acknowledge all alerts
+router.post('/clear-alerts', asyncHandler(async (req, res) => {
+  const alerts = await EventRepository.findAll({ acknowledged: false });
+  for (const alert of alerts) {
+    await EventRepository.acknowledge(alert.id);
+  }
+  res.json({ cleared: alerts.length });
 }));
 
 export default router;
